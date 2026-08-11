@@ -1,0 +1,21 @@
+{
+    "plugin.name": "Claude Usage",
+    "actions.claude-usage.name": "Claude-Nutzung",
+
+    "claude-usage.command.title": "ccusage-Befehl",
+    "claude-usage.command.subtitle": "Wie ccusage aufgerufen wird, z. B. \"npx --yes ccusage@latest\" oder einfach \"ccusage\", falls global installiert",
+
+    "claude-usage.token-limit.title": "Token-Limit für 100 %",
+    "claude-usage.token-limit.subtitle": "Anzahl Tokens, die als volles 5-Stunden-Limit deines Plans gelten. Bei 0 wird stattdessen nur die rohe Token-Anzahl angezeigt.",
+
+    "claude-usage.refresh.title": "Aktualisierungsintervall (Sekunden, min. 15)",
+
+    "claude-usage.show-cost.title": "Kosten statt Restzeit anzeigen",
+    "claude-usage.show-cost.subtitle": "Untere Beschriftung zeigt die Kosten (USD) des Blocks statt der verbleibenden Zeit im 5-Stunden-Fenster",
+
+    "claude-usage.label.top": "Claude",
+    "claude-usage.label.loading": "…",
+    "claude-usage.label.no-block": "Kein aktiver Block",
+    "claude-usage.label.error": "ccusage-Fehler",
+    "claude-usage.label.time-left": "{time} übrig"
+}
