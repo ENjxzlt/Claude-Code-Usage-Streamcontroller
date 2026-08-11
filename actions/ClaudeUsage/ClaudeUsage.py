@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 import gi
 from loguru import logger as log
+from PIL import Image, ImageDraw
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -28,12 +29,48 @@ COLOR_WARN = [219, 171, 9, 255]
 COLOR_CRIT = [218, 54, 51, 255]
 COLOR_NONE = [0, 0, 0, 0]
 
+LABEL_OUTLINE = {"outline_width": 2, "outline_color": [0, 0, 0, 190]}
+
 TOKEN_FIELDS = (
     "inputTokens",
     "outputTokens",
     "cacheCreationInputTokens",
     "cacheReadInputTokens",
 )
+
+# Rendered at 4x and downsampled - PIL's arc drawing has no anti-aliasing of
+# its own, so this is a cheap way to avoid a jagged ring on the key.
+RING_CANVAS = 1024
+RING_OUTPUT = 256
+RING_THICKNESS = 90
+RING_INSET = 70
+RING_TRACK_COLOR = (255, 255, 255, 40)
+RING_OVERFLOW_COLOR = (218, 54, 51, 255)
+
+
+def render_ring_image(percent: float, color) -> "Image.Image":
+    """
+    Draws a circular progress ring (0-100%, clockwise from the top) as a
+    transparent-background RGBA image, meant to be used as the key's media
+    so it sits behind the text labels.
+    """
+    size = RING_CANVAS
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    bbox = [RING_INSET, RING_INSET, size - RING_INSET, size - RING_INSET]
+
+    draw.arc(bbox, start=0, end=360, fill=RING_TRACK_COLOR, width=RING_THICKNESS)
+
+    sweep = max(0.0, min(percent, 100.0)) / 100.0 * 360.0
+    if sweep > 0.5:
+        # Start at the top (12 o'clock) and sweep clockwise.
+        draw.arc(bbox, start=-90, end=-90 + sweep, fill=tuple(color), width=RING_THICKNESS)
+
+    if percent > 100:
+        outer = [c + (-40 if i < 2 else 40) for i, c in enumerate(bbox)]
+        draw.arc(outer, start=0, end=360, fill=RING_OVERFLOW_COLOR, width=28)
+
+    return img.resize((RING_OUTPUT, RING_OUTPUT), Image.LANCZOS)
 
 
 def is_in_flatpak() -> bool:
@@ -122,15 +159,20 @@ class ClaudeUsage(ActionBase):
     # ------------------------------------------------------------------ #
 
     def on_ready(self):
+        self._set_static_icon()
+
+        self.set_top_label(text=self.tr("claude-usage.label.top"), font_size=12, **LABEL_OUTLINE)
+        self.set_center_label(text=self.tr("claude-usage.label.loading"), font_size=20, **LABEL_OUTLINE)
+        self.set_bottom_label(text="", font_size=11, **LABEL_OUTLINE)
+
+        self._start_worker()
+
+    def _set_static_icon(self):
+        """Falls back to the plain plugin icon when there's no percentage to
+        draw a ring for (no token limit configured, error, no active block)."""
         icon_path = os.path.join(self.plugin_base.PATH, "assets", "icon.png")
         if os.path.isfile(icon_path):
             self.set_media(media_path=icon_path, size=0.55, valign=-0.65)
-
-        self.set_top_label(text=self.tr("claude-usage.label.top"), font_size=12)
-        self.set_center_label(text=self.tr("claude-usage.label.loading"), font_size=20)
-        self.set_bottom_label(text="", font_size=11)
-
-        self._start_worker()
 
     def on_remove(self):
         self._stop_event.set()
@@ -247,15 +289,17 @@ class ClaudeUsage(ActionBase):
 
     def _render(self, block, error, settings):
         if error is not None:
-            self.set_center_label(text="!", font_size=22)
-            self.set_bottom_label(text=self.tr("claude-usage.label.error"), font_size=10)
+            self._set_static_icon()
+            self.set_center_label(text="!", font_size=22, **LABEL_OUTLINE)
+            self.set_bottom_label(text=self.tr("claude-usage.label.error"), font_size=10, **LABEL_OUTLINE)
             self.set_background_color(COLOR_CRIT)
             log.error(f"[ClaudeUsage] {error}")
             return False
 
         if not block:
-            self.set_center_label(text="–", font_size=22)
-            self.set_bottom_label(text=self.tr("claude-usage.label.no-block"), font_size=10)
+            self._set_static_icon()
+            self.set_center_label(text="–", font_size=22, **LABEL_OUTLINE)
+            self.set_bottom_label(text=self.tr("claude-usage.label.no-block"), font_size=10, **LABEL_OUTLINE)
             self.set_background_color(COLOR_NONE)
             return False
 
@@ -267,7 +311,6 @@ class ClaudeUsage(ActionBase):
 
         remaining_seconds = _seconds_until(block.get("endTime"))
 
-        color = COLOR_NONE
         if token_limit > 0:
             percent = round((total_tokens / token_limit) * 100)
             center_text = f"{percent}%"
@@ -277,8 +320,14 @@ class ClaudeUsage(ActionBase):
                 color = COLOR_WARN
             else:
                 color = COLOR_OK
+            # The ring itself already carries the status color, so leave the
+            # key's tile background neutral instead of double-signalling.
+            self.set_media(image=render_ring_image(percent, color), size=0.97)
+            self.set_background_color(COLOR_NONE)
         else:
             center_text = humanize_tokens(total_tokens)
+            self._set_static_icon()
+            self.set_background_color(COLOR_NONE)
 
         cost = block.get("costUSD")
         if show_cost and cost is not None:
@@ -290,9 +339,8 @@ class ClaudeUsage(ActionBase):
         else:
             bottom_text = ""
 
-        self.set_center_label(text=center_text, font_size=20)
-        self.set_bottom_label(text=bottom_text, font_size=11)
-        self.set_background_color(color)
+        self.set_center_label(text=center_text, font_size=20, **LABEL_OUTLINE)
+        self.set_bottom_label(text=bottom_text, font_size=11, **LABEL_OUTLINE)
         return False
 
 

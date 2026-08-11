@@ -8,9 +8,10 @@ It works by shelling out to [`ccusage`](https://github.com/ryoppippi/ccusage), a
 
 ## What it shows
 
+- **Progress ring:** a circular gauge drawn around the key, filling clockwise from the top as you use up the current 5-hour block (color-coded: green < 70 %, yellow 70–90 %, red ≥ 90 %; a thin red outer ring appears past 100 %). Only shown once you've set a token limit (see below) — otherwise the key falls back to the plain plugin icon.
 - **Top label:** `Claude`
 - **Center label:** either
-  - a **percentage** of a token limit you configure (color-coded: green < 70 %, yellow 70–90 %, red ≥ 90 %), or
+  - the **percentage** (matching the ring), or
   - the **raw token count** (e.g. `128.4k`) if you leave the token limit at `0`
 - **Bottom label:** time remaining in the current 5-hour block (e.g. `2h 15m left`), or the block's cost in USD if you enable that option
 - If there's no active session right now, it shows "No active block"
