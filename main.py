@@ -6,18 +6,19 @@ Stream Deck key: percentage of a configurable token limit (or the raw token
 count), plus the time remaining in the current 5-hour window.
 """
 
-import os
-import sys
-
 from src.backend.PluginManager.PluginBase import PluginBase
 from src.backend.PluginManager.ActionHolder import ActionHolder
 from src.backend.DeckManagement.InputIdentifier import Input
 from src.backend.PluginManager.ActionInputSupport import ActionInputSupport
 
-# Make sure the plugin's own package (actions/...) is importable
-sys.path.append(os.path.dirname(__file__))
-
-from actions.ClaudeUsage.ClaudeUsage import ClaudeUsage
+# StreamController imports every plugin's main.py as `plugins.<folder>.main`,
+# so a relative import resolves within that package regardless of what the
+# plugin's folder is named. An absolute `import actions...` after manually
+# appending this directory to sys.path is fragile: it registers a top-level
+# "actions" module/package in sys.modules that can collide with any other
+# installed plugin that also ships an "actions" folder (e.g. the official OS
+# plugin), silently breaking the import - and with it, the whole plugin.
+from .actions.ClaudeUsage.ClaudeUsage import ClaudeUsage
 
 
 class ClaudeUsagePlugin(PluginBase):
@@ -43,7 +44,7 @@ class ClaudeUsagePlugin(PluginBase):
 
         self.register(
             plugin_name=self.lm.get("plugin.name"),
-            github_repo="https://github.com/enjxzlt/claude-code-usage-streamcontroller",
-            plugin_version="1.0.0",
+            github_repo="https://github.com/ENjxzlt/Claude-Code-Usage-Streamcontroller",
+            plugin_version="1.1.0",
             app_version="1.1.1-alpha",
         )

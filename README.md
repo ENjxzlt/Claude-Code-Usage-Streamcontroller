@@ -1,22 +1,23 @@
 # Claude Usage — StreamController Plugin
 
-A [StreamController](https://github.com/StreamController/StreamController) plugin that shows your **Claude Code** usage on a Stream Deck key: how much of the current **5-hour session block** you've used, and how much time is left before it resets.
+A [StreamController](https://github.com/StreamController/StreamController) plugin that shows your **Claude Code** usage on a Stream Deck key: a Claude-branded progress ring for how much of the current **5-hour session block** you've used, plus how much time is left before it resets.
 
-It works by shelling out to [`ccusage`](https://github.com/ryoppippi/ccusage), a community CLI that reads Claude Code's local session logs (`~/.claude/projects/**/*.jsonl`) and reports token usage per 5-hour billing window. No API key or login is needed — it only reads files that Claude Code already writes on your machine.
+It works by shelling out to [`ccusage`](https://github.com/ryoppippi/ccusage), a community CLI that reads Claude Code's local session logs (`~/.claude/projects/**/*.jsonl`) and reports token usage per 5-hour billing window. No API key or login is needed — it only reads files that Claude Code already writes on your machine. This also picks up usage from any tool that shells out to the real `claude` CLI under the hood (e.g. the [Claudian](https://github.com/YishenTu/claudian) Obsidian plugin), not just the terminal.
 
-![key preview](store/Thumbnail.png)
+![Ring preview at 35%, 78%, 96% and 112%](docs/preview.png)
 
 ## What it shows
 
+- **Progress ring:** a circular gauge drawn around the key, filling clockwise from the top as you use up the current 5-hour block, styled in Claude's own brand colors — sage green < 70 %, Claude orange 70–90 %, rust ≥ 90 %, with a darker rust outer ring past 100 %. Only shown once you've set a token limit (see below) — otherwise the key falls back to the plain plugin icon.
 - **Top label:** `Claude`
 - **Center label:** either
-  - a **percentage** of a token limit you configure (color-coded: green < 70 %, yellow 70–90 %, red ≥ 90 %), or
+  - the **percentage** (matching the ring), or
   - the **raw token count** (e.g. `128.4k`) if you leave the token limit at `0`
 - **Bottom label:** time remaining in the current 5-hour block (e.g. `2h 15m left`), or the block's cost in USD if you enable that option
 - If there's no active session right now, it shows "No active block"
 - Pressing the key forces an immediate refresh
 
-> **Note on accuracy:** the percentage is an *estimate* based on local token counts, not the authoritative number Anthropic's servers use internally (which also factors in compute time and applies per-plan, per-account limits). Treat it as a helpful gauge, not a precise readout. There is also no separate indicator for the weekly cap — only the 5-hour window is shown.
+> **Note on accuracy:** the percentage is an *estimate* based on local token counts, not the authoritative number Anthropic's servers use internally (which also factors in compute time and applies per-plan, per-account limits). Treat it as a helpful gauge, not a precise readout. There is also no separate indicator for the weekly cap — only the 5-hour window is shown. It also can't see Claude.ai / Claude Desktop usage, since those don't write the same local session logs.
 
 ## Requirements
 
@@ -28,6 +29,12 @@ By default the plugin invokes `npx --yes ccusage@latest`, so there's nothing ext
 
 ## Installation
 
+### From the StreamController Store
+
+Search for **Claude Usage** in StreamController's built-in store and install it from there. *(Pending review — see [Contributing](#contributing) if it's not listed yet.)*
+
+### Manually
+
 1. Clone or copy this folder somewhere on your machine.
 2. Run the installer, which symlinks it into StreamController's plugin directory:
    ```bash
@@ -37,10 +44,6 @@ By default the plugin invokes `npx --yes ccusage@latest`, so there's nothing ext
 3. Restart StreamController.
 4. Open a key's action picker, find **Claude Usage**, and add it to a key.
 
-### Flatpak note
-
-StreamController's Flatpak sandbox doesn't have your host's Node/npm/`ccusage` on its `PATH`. The plugin already handles this by running the command via `flatpak-spawn --host`, so it executes on the host system where `npx`/`ccusage` actually live — you don't need to do anything extra.
-
 ## Configuration
 
 Click the key's action in StreamController to open its settings:
@@ -48,20 +51,42 @@ Click the key's action in StreamController to open its settings:
 | Setting | Default | Description |
 | --- | --- | --- |
 | ccusage command | `npx --yes ccusage@latest` | How to invoke ccusage. Use `ccusage` if you installed it globally, or `bunx ccusage` for Bun. |
-| Token limit for 100% | `0` | Tokens that count as your plan's full 5-hour limit. Leave at `0` to just show the raw token count instead of a percentage — useful since Anthropic doesn't publish exact per-plan token limits; you can approximate yours by watching `ccusage blocks` over a few sessions and setting it close to what you've observed. |
+| Token limit for 100% | `0` | Tokens that count as your plan's full 5-hour limit. Leave at `0` to just show the raw token count instead of a percentage — useful since Anthropic doesn't publish exact per-plan token limits; you can approximate yours by watching `ccusage blocks --recent` over a few sessions and setting it close to what you've observed. |
 | Refresh interval | `60` seconds | How often the key updates in the background (minimum 15s). |
 | Show cost instead of time remaining | off | Swap the bottom label to the block's USD cost. |
 
 ## How it works
 
-Every refresh interval, a background thread runs:
+Every refresh interval (and once immediately on key press), a background thread runs:
 
 ```bash
 <command> blocks --active --json --offline
 ```
 
-and parses the currently active block's token counts (`inputTokens` + `outputTokens` + `cacheCreationInputTokens` + `cacheReadInputTokens`) and its `endTime` to compute the percentage and time remaining. The UI update is marshalled back onto the main thread, so a slow `ccusage` invocation never blocks StreamController.
+and parses the currently active block's token counts (`inputTokens` + `outputTokens` + `cacheCreationInputTokens` + `cacheReadInputTokens`) and its `endTime` to compute the percentage and time remaining. The ring is drawn with Pillow (already a StreamController dependency) at 4x resolution and downsampled for smooth edges, then set as the key's media. The UI update is marshalled back onto the main thread via `GLib.idle_add`, so a slow `ccusage` invocation never blocks StreamController.
+
+On a Flatpak install, the command runs via `flatpak-spawn --host` (with the working directory pinned to `$HOME`) so it executes on the host system where Node/`ccusage` actually live, rather than inside the sandbox.
+
+## Troubleshooting
+
+Check the log for errors, filtering to just this plugin:
+
+```bash
+# Flatpak
+grep -E "ClaudeUsage" ~/.var/app/com.core447.StreamController/data/logs/logs.log
+# native
+grep -E "ClaudeUsage" ~/.local/share/StreamController/logs/logs.log
+```
+
+- **`No module named 'actions.ClaudeUsage'` / action missing entirely:** you're on an old copy of the plugin — `git pull` and restart StreamController.
+- **Key shows "!" / "ccusage error":** the `[ClaudeUsage] ...` line right above it in the log has the actual failure. Test the command by hand first: `npx --yes ccusage@latest blocks --active --json --offline`.
+- **`Portal call failed: Failed to start command` (Flatpak):** already fixed as of 1.1.0 — make sure you're on the latest version.
+- Full step-by-step install walkthrough is in [Installation](#installation); for a token-limit starting point run `npx --yes ccusage@latest blocks --recent` and use the highest "Total Tokens" you've seen.
+
+## Contributing
+
+Issues and PRs welcome. If you'd like this listed on the official StreamController store, see the [plugin store docs](https://streamcontroller.github.io/docs/latest/plugin_dev/intro/) — this repo already ships the `manifest.json`, `attribution.json`, `store/` thumbnail, and `.github/workflows/notify-store.yml` the store expects; it just needs a `STORE_AUTOMATION_TOKEN` once accepted.
 
 ## License
 
-GPLv3, matching StreamController itself.
+[GPL-3.0](LICENSE), matching StreamController itself. See [`attribution.json`](attribution.json) and the `Attribution.txt` files under `assets/` and `store/` for asset credits.
