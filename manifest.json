@@ -1,0 +1,19 @@
+{
+    "version": "1.0.0",
+    "thumbnail": "store/Thumbnail.png",
+    "id": "dev_enjxz_ClaudeUsage",
+    "name": "Claude Usage",
+    "descriptions": {
+        "en_US": "Shows your Claude Code usage limit (5-hour session block) on a key, powered by ccusage.",
+        "de_DE": "Zeigt dein Claude Code Nutzungslimit (5-Stunden-Sitzungsfenster) auf einer Taste an, auf Basis von ccusage."
+    },
+    "short-descriptions": {
+        "en_US": "Claude Code usage limit",
+        "de_DE": "Claude Code Nutzungslimit"
+    },
+    "tags": ["Utility", "Productivity", "Developer Tools"],
+    "minimum-app-version": "1.1.1-alpha",
+    "app-version": "1.1.1-alpha",
+    "description": "Shows your Claude Code usage limit (5-hour session block) on a key, powered by ccusage.",
+    "short-description": "Claude Code usage limit"
+}
