@@ -85,7 +85,19 @@ grep -E "ClaudeUsage" ~/.local/share/StreamController/logs/logs.log
 
 ## Contributing
 
-Issues and PRs welcome. If you'd like this listed on the official StreamController store, see the [plugin store docs](https://streamcontroller.github.io/docs/latest/plugin_dev/intro/) — this repo already ships the `manifest.json`, `attribution.json`, `store/` thumbnail, and `.github/workflows/notify-store.yml` the store expects; it just needs a `STORE_AUTOMATION_TOKEN` once accepted.
+Issues and PRs welcome. This repo already ships everything the [store submission process](https://streamcontroller.github.io/docs/latest/plugin_dev/intro/) expects — `manifest.json` (with a `github` field), `about.json`, `attribution.json`, `requirements.txt`, the `store/` thumbnail, and `.github/workflows/notify-store.yml` (needs a `STORE_AUTOMATION_TOKEN` once accepted). What's still open, and has to come from whoever submits it (it's a personal attestation to Core447's store terms, tied to your own GitHub account):
+
+1. Fork [StreamController-Store](https://github.com/StreamController/StreamController-Store).
+2. Add an entry to `Plugins.json`:
+   ```json
+   {
+       "url": "https://github.com/ENjxzlt/Claude-Code-Usage-Streamcontroller",
+       "commits": {
+           "1.5.0": "<commit hash of the release you tested against>"
+       }
+   }
+   ```
+3. Open a PR against the Store repo and wait for approval (usually a couple of hours).
 
 ## License
 
