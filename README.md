@@ -93,7 +93,7 @@ Issues and PRs welcome. This repo already ships everything the [store submission
    {
        "url": "https://github.com/ENjxzlt/Claude-Code-Usage-Streamcontroller",
        "commits": {
-           "1.5.0": "<commit hash of the release you tested against>"
+           "1.5.0-beta": "<commit hash of the release you tested against>"
        }
    }
    ```
