@@ -4,6 +4,7 @@ import threading
 from datetime import datetime, timezone
 
 import gi
+from loguru import logger as log
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -241,7 +242,7 @@ class ClaudeUsage(ActionBase):
             self.set_center_label(text="!", font_size=22)
             self.set_bottom_label(text=self.tr("claude-usage.label.error"), font_size=10)
             self.set_background_color(COLOR_CRIT)
-            print(f"[ClaudeUsage] {error}")
+            log.error(f"[ClaudeUsage] {error}")
             return False
 
         if not block:
