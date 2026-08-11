@@ -6,6 +6,8 @@ It works by shelling out to [`ccusage`](https://github.com/ryoppippi/ccusage), a
 
 ![Ring preview at 35%, 78%, 96% and 112%](docs/preview.png)
 
+> **Disclaimer:** This plugin — code, README, and assets — was written by [Claude Code](https://claude.com/claude-code), Anthropic's AI coding agent, based on prompts from the repo owner. It has been tested on a real StreamController install, but review it yourself before trusting it, especially the parts that run shell commands. Issues and PRs are welcome.
+
 ## What it shows
 
 - **Progress ring:** a circular gauge drawn around the key, filling clockwise from the top as you use up the current 5-hour block, styled in Claude's own brand colors — sage green < 70 %, Claude orange 70–90 %, rust ≥ 90 %, with a darker rust outer ring past 100 %. Only shown once you've set a token limit (see below) — otherwise the key falls back to the plain plugin icon.
