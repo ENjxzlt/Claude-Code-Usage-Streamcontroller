@@ -79,6 +79,14 @@ def fetch_active_block(command: str, timeout: int = 25) -> dict:
         capture_output=True,
         text=True,
         timeout=timeout,
+        # Without an explicit cwd, the child inherits StreamController's
+        # sandbox-internal working directory (e.g. /app/bin/StreamController).
+        # flatpak-spawn --host then asks the host portal to chdir into that
+        # same path before running the command - which doesn't exist on the
+        # host, so the whole call fails with "Portal call failed: Failed to
+        # start command". Pin it to the user's home directory instead, which
+        # exists on both sides.
+        cwd=os.path.expanduser("~"),
     )
 
     if proc.returncode != 0:
