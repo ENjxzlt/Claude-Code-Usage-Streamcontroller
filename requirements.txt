@@ -1,0 +1,3 @@
+# Everything else this plugin imports (gi/Gtk/Adw, loguru, StreamController's
+# own src.backend.* modules) is already provided by StreamController itself.
+Pillow
