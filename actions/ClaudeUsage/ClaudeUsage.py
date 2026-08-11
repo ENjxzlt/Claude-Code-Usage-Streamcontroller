@@ -24,12 +24,26 @@ DEFAULT_REFRESH_SECONDS = 60
 DEFAULT_TOKEN_LIMIT = 0  # 0 => show raw token count instead of a percentage
 MIN_REFRESH_SECONDS = 15
 
-COLOR_OK = [46, 160, 67, 255]
-COLOR_WARN = [219, 171, 9, 255]
-COLOR_CRIT = [218, 54, 51, 255]
+# Claude / Anthropic brand palette (https://www.anthropic.com brand colors:
+# cream #faf9f5, light gray #e8e6dc, dark #141413, orange accent #d97757,
+# green accent #788c5d). There's no official "alert red" in the brand kit,
+# so the two hottest stops are hand-picked, more saturated shades of the
+# orange accent that stay in the same warm family instead of jumping to a
+# generic stock red.
+CLAUDE_CREAM = (250, 249, 245)
+CLAUDE_LIGHT_GRAY = (232, 230, 220)
+CLAUDE_DARK = (20, 20, 19)
+CLAUDE_GREEN = (120, 140, 93)
+CLAUDE_ORANGE = (217, 119, 87)
+CLAUDE_RUST = (168, 66, 34)
+CLAUDE_RUST_DARK = (122, 45, 21)
+
+COLOR_OK = [*CLAUDE_GREEN, 255]
+COLOR_WARN = [*CLAUDE_ORANGE, 255]
+COLOR_CRIT = [*CLAUDE_RUST, 255]
 COLOR_NONE = [0, 0, 0, 0]
 
-LABEL_OUTLINE = {"outline_width": 2, "outline_color": [0, 0, 0, 190]}
+LABEL_OUTLINE = {"outline_width": 2, "outline_color": [*CLAUDE_DARK, 190]}
 
 TOKEN_FIELDS = (
     "inputTokens",
@@ -44,8 +58,8 @@ RING_CANVAS = 1024
 RING_OUTPUT = 256
 RING_THICKNESS = 90
 RING_INSET = 70
-RING_TRACK_COLOR = (255, 255, 255, 40)
-RING_OVERFLOW_COLOR = (218, 54, 51, 255)
+RING_TRACK_COLOR = (*CLAUDE_LIGHT_GRAY, 55)
+RING_OVERFLOW_COLOR = (*CLAUDE_RUST_DARK, 255)
 
 
 def render_ring_image(percent: float, color) -> "Image.Image":
