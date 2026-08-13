@@ -1,5 +1,5 @@
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import gi
 from loguru import logger as log
@@ -17,25 +17,40 @@ from .. import _shared as shared
 # ---------------------------------------------------------------------------
 
 DEFAULT_TOKEN_LIMIT = 0  # 0 => show raw token count instead of a percentage
+DEFAULT_START_OF_WEEK = "sunday"
 
-TOKEN_FIELDS = (
-    "inputTokens",
-    "outputTokens",
-    "cacheCreationInputTokens",
-    "cacheReadInputTokens",
-)
+# Matches ccusage's --start-of-week values, in the order shown in the dropdown.
+WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+WEEKDAY_LABELS = [day.capitalize() for day in WEEKDAYS]
 
 
-def fetch_active_block(command: str, timeout: int = 25) -> dict:
+def fetch_current_week(command: str, start_of_week: str, timeout: int = 25) -> dict:
     """
-    Runs `<command> blocks --active --json --offline` and returns the
-    currently active 5-hour block as a dict, or {} if there is none.
+    Runs `<command> weekly --json --offline --last 1 -w <start_of_week>` and
+    returns the current week's totals as a dict, or {} if ccusage returned
+    nothing (e.g. no usage at all yet).
     """
-    data = shared.run_ccusage(command, "blocks --active --json --offline", timeout=timeout)
-    for block in data.get("blocks", []):
-        if block.get("isActive"):
-            return block
-    return {}
+    args = f"weekly --json --offline --last 1 -w {start_of_week}"
+    data = shared.run_ccusage(command, args, timeout=timeout)
+    weeks = data.get("weekly", [])
+    return weeks[0] if weeks else {}
+
+
+def seconds_until_week_end(week_start_date: str | None, start_of_week: str):
+    """
+    ccusage's 'week' field is a plain YYYY-MM-DD date (the configured
+    start-of-week day), with no time/timezone - treated as UTC midnight,
+    consistent with how ccusage timestamps everything else. The week is
+    always exactly 7 days.
+    """
+    if not week_start_date:
+        return None
+    try:
+        start = datetime.strptime(week_start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    end = start + timedelta(days=7)
+    return (end - datetime.now(timezone.utc)).total_seconds()
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +58,7 @@ def fetch_active_block(command: str, timeout: int = 25) -> dict:
 # ---------------------------------------------------------------------------
 
 
-class ClaudeUsage(ActionBase):
+class ClaudeWeeklyUsage(ActionBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.has_configuration = True
@@ -58,7 +73,7 @@ class ClaudeUsage(ActionBase):
     def on_ready(self):
         shared.set_static_icon(self)
 
-        self.set_top_label(text=self.tr("claude-usage.label.top"), font_size=12, **shared.LABEL_OUTLINE)
+        self.set_top_label(text=self.tr("claude-weekly.label.top"), font_size=12, **shared.LABEL_OUTLINE)
         self.set_center_label(text=self.tr("claude-usage.label.loading"), font_size=20, **shared.LABEL_OUTLINE)
         self.set_bottom_label(text="", font_size=11, **shared.LABEL_OUTLINE)
 
@@ -70,7 +85,7 @@ class ClaudeUsage(ActionBase):
     def on_key_down(self):
         # Manual refresh on key press, without waiting for the timer.
         threading.Thread(
-            target=self._refresh_once, daemon=True, name="ClaudeUsage-manual-refresh"
+            target=self._refresh_once, daemon=True, name="ClaudeWeeklyUsage-manual-refresh"
         ).start()
 
     def tr(self, key: str) -> str:
@@ -86,6 +101,7 @@ class ClaudeUsage(ActionBase):
         settings.setdefault("token_limit", DEFAULT_TOKEN_LIMIT)
         settings.setdefault("refresh_seconds", shared.DEFAULT_REFRESH_SECONDS)
         settings.setdefault("show_cost", False)
+        settings.setdefault("start_of_week", DEFAULT_START_OF_WEEK)
         self.set_settings(settings)
         return settings
 
@@ -96,9 +112,24 @@ class ClaudeUsage(ActionBase):
         command_row.set_text(str(settings.get("command", shared.DEFAULT_COMMAND)))
         command_row.connect("notify::text", self._on_command_changed)
 
-        limit_row = Adw.EntryRow(title=self.tr("claude-usage.token-limit.title"))
+        limit_row = Adw.EntryRow(title=self.tr("claude-weekly.token-limit.title"))
         limit_row.set_text(str(settings.get("token_limit", DEFAULT_TOKEN_LIMIT)))
         limit_row.connect("notify::text", self._on_token_limit_changed)
+
+        weekday_row = Adw.ActionRow(
+            title=self.tr("claude-weekly.start-of-week.title"),
+            subtitle=self.tr("claude-weekly.start-of-week.subtitle"),
+        )
+        weekday_dropdown = Gtk.DropDown(
+            model=Gtk.StringList.new(WEEKDAY_LABELS), valign=Gtk.Align.CENTER
+        )
+        current_day = str(settings.get("start_of_week", DEFAULT_START_OF_WEEK))
+        weekday_dropdown.set_selected(
+            WEEKDAYS.index(current_day) if current_day in WEEKDAYS else WEEKDAYS.index(DEFAULT_START_OF_WEEK)
+        )
+        weekday_dropdown.connect("notify::selected", self._on_start_of_week_changed)
+        weekday_row.add_suffix(weekday_dropdown)
+        weekday_row.set_activatable_widget(weekday_dropdown)
 
         refresh_row = Adw.EntryRow(title=self.tr("claude-usage.refresh.title"))
         refresh_row.set_text(str(settings.get("refresh_seconds", shared.DEFAULT_REFRESH_SECONDS)))
@@ -115,7 +146,7 @@ class ClaudeUsage(ActionBase):
         cost_row.add_suffix(cost_switch)
         cost_row.set_activatable_widget(cost_switch)
 
-        return [command_row, limit_row, refresh_row, cost_row]
+        return [command_row, limit_row, weekday_row, refresh_row, cost_row]
 
     def _on_command_changed(self, entry, _):
         settings = self.get_settings()
@@ -125,6 +156,11 @@ class ClaudeUsage(ActionBase):
     def _on_token_limit_changed(self, entry, _):
         settings = self.get_settings()
         settings["token_limit"] = shared.parse_int(entry.get_text(), DEFAULT_TOKEN_LIMIT, minimum=0)
+        self.set_settings(settings)
+
+    def _on_start_of_week_changed(self, dropdown, _):
+        settings = self.get_settings()
+        settings["start_of_week"] = WEEKDAYS[dropdown.get_selected()]
         self.set_settings(settings)
 
     def _on_refresh_changed(self, entry, _):
@@ -148,7 +184,7 @@ class ClaudeUsage(ActionBase):
             return
         self._stop_event.clear()
         self._worker_thread = threading.Thread(
-            target=self._worker_loop, daemon=True, name=f"ClaudeUsage-{self.action_id}"
+            target=self._worker_loop, daemon=True, name=f"ClaudeWeeklyUsage-{self.action_id}"
         )
         self._worker_thread.start()
 
@@ -164,42 +200,43 @@ class ClaudeUsage(ActionBase):
     def _refresh_once(self):
         settings = self._settings()
         command = settings.get("command", shared.DEFAULT_COMMAND)
+        start_of_week = settings.get("start_of_week", DEFAULT_START_OF_WEEK)
         try:
-            block = fetch_active_block(command)
+            week = fetch_current_week(command, start_of_week)
             error = None
         except Exception as e:  # noqa: BLE001 - surface any failure on the key
-            block = None
+            week = None
             error = str(e)
 
-        GLib.idle_add(self._render, block, error, settings)
+        GLib.idle_add(self._render, week, error, settings)
 
     # ------------------------------------------------------------------ #
     # Rendering
     # ------------------------------------------------------------------ #
 
-    def _render(self, block, error, settings):
+    def _render(self, week, error, settings):
         if error is not None:
             shared.set_static_icon(self)
             self.set_center_label(text="!", font_size=22, **shared.LABEL_OUTLINE)
-            self.set_bottom_label(text=self.tr("claude-usage.label.error"), font_size=10, **shared.LABEL_OUTLINE)
+            self.set_bottom_label(text=self.tr("claude-weekly.label.error"), font_size=10, **shared.LABEL_OUTLINE)
             self.set_background_color(shared.COLOR_CRIT)
-            log.error(f"[ClaudeUsage] {error}")
+            log.error(f"[ClaudeWeeklyUsage] {error}")
             return False
 
-        if not block:
+        if not week:
             shared.set_static_icon(self)
             self.set_center_label(text="–", font_size=22, **shared.LABEL_OUTLINE)
-            self.set_bottom_label(text=self.tr("claude-usage.label.no-block"), font_size=10, **shared.LABEL_OUTLINE)
+            self.set_bottom_label(text=self.tr("claude-weekly.label.no-data"), font_size=10, **shared.LABEL_OUTLINE)
             self.set_background_color(shared.COLOR_NONE)
             return False
 
-        token_counts = block.get("tokenCounts", {})
-        total_tokens = sum(int(token_counts.get(field) or 0) for field in TOKEN_FIELDS)
+        total_tokens = int(week.get("totalTokens") or 0)
 
         token_limit = shared.parse_int(settings.get("token_limit"), DEFAULT_TOKEN_LIMIT, minimum=0)
         show_cost = bool(settings.get("show_cost", False))
+        start_of_week = settings.get("start_of_week", DEFAULT_START_OF_WEEK)
 
-        remaining_seconds = _seconds_until(block.get("endTime"))
+        remaining_seconds = seconds_until_week_end(week.get("week"), start_of_week)
 
         if token_limit > 0:
             percent = round((total_tokens / token_limit) * 100)
@@ -219,7 +256,7 @@ class ClaudeUsage(ActionBase):
             shared.set_static_icon(self)
             self.set_background_color(shared.COLOR_NONE)
 
-        cost = block.get("costUSD")
+        cost = week.get("totalCost")
         if show_cost and cost is not None:
             bottom_text = f"${cost:.2f}"
         elif remaining_seconds is not None:
@@ -232,13 +269,3 @@ class ClaudeUsage(ActionBase):
         self.set_center_label(text=center_text, font_size=20, **shared.LABEL_OUTLINE)
         self.set_bottom_label(text=bottom_text, font_size=11, **shared.LABEL_OUTLINE)
         return False
-
-
-def _seconds_until(iso_timestamp: str | None):
-    if not iso_timestamp:
-        return None
-    try:
-        end_dt = datetime.fromisoformat(iso_timestamp.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return (end_dt - datetime.now(timezone.utc)).total_seconds()

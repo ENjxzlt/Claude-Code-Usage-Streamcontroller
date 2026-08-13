@@ -1,12 +1,12 @@
 {
-    "version": "1.1.0",
+    "version": "1.2.0",
     "thumbnail": "store/Thumbnail.png",
     "id": "dev_enjxz_ClaudeUsage",
     "name": "Claude Usage",
     "github": "https://github.com/ENjxzlt/Claude-Code-Usage-Streamcontroller",
     "descriptions": {
-        "en_US": "Shows your Claude Code usage limit (5-hour session block) on a key as a Claude-branded progress ring, powered by ccusage.",
-        "de_DE": "Zeigt dein Claude Code Nutzungslimit (5-Stunden-Sitzungsfenster) als Fortschrittsring im Claude-Design auf einer Taste an, auf Basis von ccusage."
+        "en_US": "Shows your Claude Code usage limit (5-hour session block and/or current week) on a key as a Claude-branded progress ring, powered by ccusage.",
+        "de_DE": "Zeigt dein Claude Code Nutzungslimit (5-Stunden-Sitzungsfenster und/oder aktuelle Woche) als Fortschrittsring im Claude-Design auf einer Taste an, auf Basis von ccusage."
     },
     "short-descriptions": {
         "en_US": "Claude Code usage limit",
@@ -15,6 +15,6 @@
     "tags": ["Utility", "Productivity"],
     "minimum-app-version": "1.5.0",
     "app-version": "1.5.0-beta",
-    "description": "Shows your Claude Code usage limit (5-hour session block) on a key as a Claude-branded progress ring, powered by ccusage.",
+    "description": "Shows your Claude Code usage limit (5-hour session block and/or current week) on a key as a Claude-branded progress ring, powered by ccusage.",
     "short-description": "Claude Code usage limit"
 }
