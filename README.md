@@ -33,7 +33,7 @@ By default the plugin invokes `npx --yes ccusage@latest`, so there's nothing ext
 
 ### From the StreamController Store
 
-Search for **Claude Usage** in StreamController's built-in store and install it from there. *(Pending review — see [Contributing](#contributing) if it's not listed yet.)*
+Search for **Claude Usage** in StreamController's built-in store and install it from there. 
 
 ### Manually
 
