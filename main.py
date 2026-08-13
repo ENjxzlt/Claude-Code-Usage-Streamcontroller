@@ -1,9 +1,10 @@
 """
 Claude Usage - StreamController plugin
 
-Shows the current Claude Code 5-hour session block usage (via ccusage) on a
-Stream Deck key: percentage of a configurable token limit (or the raw token
-count), plus the time remaining in the current 5-hour window.
+Shows Claude Code usage (via ccusage) on a Stream Deck key as a
+Claude-branded progress ring: percentage of a configurable token limit (or
+the raw token count), plus time remaining. Two actions: the current 5-hour
+session block, and the current week.
 """
 
 from src.backend.PluginManager.PluginBase import PluginBase
@@ -19,6 +20,7 @@ from src.backend.PluginManager.ActionInputSupport import ActionInputSupport
 # installed plugin that also ships an "actions" folder (e.g. the official OS
 # plugin), silently breaking the import - and with it, the whole plugin.
 from .actions.ClaudeUsage.ClaudeUsage import ClaudeUsage
+from .actions.ClaudeWeeklyUsage.ClaudeWeeklyUsage import ClaudeWeeklyUsage
 
 
 class ClaudeUsagePlugin(PluginBase):
@@ -42,9 +44,22 @@ class ClaudeUsagePlugin(PluginBase):
         )
         self.add_action_holder(self.claude_usage_holder)
 
+        self.claude_weekly_usage_holder = ActionHolder(
+            plugin_base=self,
+            action_base=ClaudeWeeklyUsage,
+            action_id_suffix="ClaudeWeeklyUsage",
+            action_name=self.lm.get("actions.claude-weekly-usage.name"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.UNTESTED,
+                Input.Touchscreen: ActionInputSupport.UNTESTED,
+            },
+        )
+        self.add_action_holder(self.claude_weekly_usage_holder)
+
         self.register(
             plugin_name=self.lm.get("plugin.name"),
             github_repo="https://github.com/ENjxzlt/Claude-Code-Usage-Streamcontroller",
-            plugin_version="1.1.0",
+            plugin_version="1.2.0",
             app_version="1.5.0-beta",
         )

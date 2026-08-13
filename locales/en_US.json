@@ -1,6 +1,7 @@
 {
     "plugin.name": "Claude Usage",
     "actions.claude-usage.name": "Claude Usage",
+    "actions.claude-weekly-usage.name": "Claude Weekly Usage",
 
     "claude-usage.command.title": "ccusage command",
     "claude-usage.command.subtitle": "How to invoke ccusage, e.g. \"npx --yes ccusage@latest\" or just \"ccusage\" if installed globally",
@@ -11,11 +12,21 @@
     "claude-usage.refresh.title": "Refresh interval (seconds, min. 15)",
 
     "claude-usage.show-cost.title": "Show cost instead of time remaining",
-    "claude-usage.show-cost.subtitle": "Bottom label shows the block's cost (USD) instead of the time left in the 5-hour window",
+    "claude-usage.show-cost.subtitle": "Bottom label shows the cost (USD) instead of the time left",
 
     "claude-usage.label.top": "Claude",
     "claude-usage.label.loading": "…",
     "claude-usage.label.no-block": "No active block",
     "claude-usage.label.error": "ccusage error",
-    "claude-usage.label.time-left": "{time} left"
+    "claude-usage.label.time-left": "{time} left",
+
+    "claude-weekly.token-limit.title": "Token limit for 100%",
+    "claude-weekly.token-limit.subtitle": "Tokens that count as your plan's full weekly limit. This is a rough estimate - Anthropic's actual weekly cap is based on compute time, not raw tokens. Leave at 0 to just show the raw token count instead of a percentage.",
+
+    "claude-weekly.start-of-week.title": "Week starts on",
+    "claude-weekly.start-of-week.subtitle": "Should match the day your account's weekly limit actually resets on, not necessarily Monday/Sunday",
+
+    "claude-weekly.label.top": "Claude Week",
+    "claude-weekly.label.no-data": "No data this week",
+    "claude-weekly.label.error": "ccusage error"
 }
