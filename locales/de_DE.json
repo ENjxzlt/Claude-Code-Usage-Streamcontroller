@@ -14,7 +14,7 @@
     "claude-usage.show-cost.title": "Kosten statt Restzeit anzeigen",
     "claude-usage.show-cost.subtitle": "Untere Beschriftung zeigt die Kosten (USD) statt der verbleibenden Zeit",
 
-    "claude-usage.label.top": "Claude",
+    "claude-usage.label.top": "Sitzung",
     "claude-usage.label.loading": "…",
     "claude-usage.label.no-block": "Kein aktiver Block",
     "claude-usage.label.error": "ccusage-Fehler",
@@ -26,7 +26,22 @@
     "claude-weekly.start-of-week.title": "Woche beginnt am",
     "claude-weekly.start-of-week.subtitle": "Sollte dem Tag entsprechen, an dem dein wöchentliches Limit tatsächlich zurückgesetzt wird — nicht zwingend Montag/Sonntag",
 
-    "claude-weekly.label.top": "Claude Woche",
+    "claude-weekly.label.top": "Woche",
     "claude-weekly.label.no-data": "Keine Daten diese Woche",
-    "claude-weekly.label.error": "ccusage-Fehler"
+    "claude-weekly.label.error": "ccusage-Fehler",
+
+    "claude-usage.source.title": "Datenquelle",
+    "claude-usage.source.subtitle": "Lokale Token-Zählung (ccusage) oder dein echter kontoweiter Prozentwert wie auf der claude.ai-Nutzungsseite (benötigt installiertes und angemeldetes Claude Code)",
+    "claude-usage.source.ccusage": "Token-Zählung (ccusage)",
+    "claude-usage.source.account": "Kontoweit % (Claude Code)",
+    "claude-usage.style.title": "Stil",
+    "claude-usage.style.subtitle": "Torte und ganze Taste sind auf dunklen Tasten besser sichtbar",
+    "claude-usage.style.ring": "Ring",
+    "claude-usage.style.pie": "Torte",
+    "claude-usage.style.full": "Ganze Taste",
+    "claude-usage.label.checking": "prüfe…",
+    "claude-usage.label.ping-failed": "Ping fehlgeschlagen",
+    "claude-usage.label.press-to-check": "drücken zum Prüfen",
+    "claude-usage.label.reset": "zurückgesetzt",
+    "claude-usage.label.account-error": "Lesefehler"
 }

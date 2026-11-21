@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0
+
+- New **Data source** setting on both actions. Next to the existing local token count (`ccusage`), keys can now show your **real account-wide usage %** — the same figures as the claude.ai usage page, covering Claude Code, claude.ai and the desktop app — read from Claude Code.
+  - Pressing the key sends one tiny "ping" (Haiku, no tools, no saved session, ~900 tokens) through the `claude` CLI and shows the fresh figure.
+  - Optional: set `scripts/statusline-usage.py` as Claude Code's status line to update the keys automatically after every Claude Code message, at no extra cost.
+  - Token limit, ccusage command, week start and cost settings are hidden in this mode, since they don't apply.
+- New **Style** setting: **Ring** (as before, the default), **Pie** (a filled circle) or **Full key** (the pie wedge fills the whole key, cropped to its edges). Pie and full key are easier to see on dark keys.
+- Shorter top labels that fit the key: **Session** (was "Claude") and **Weekly** (was "Claude Week", which got cut off).
+- `ccusage` remains the default, so existing keys behave exactly as before.
+
 ## 1.2.0
 
 - New action: **Claude Weekly Usage** — same Claude-branded progress ring, but aggregated over the current week (`ccusage weekly`) instead of the active 5-hour block. Has its own token limit and a configurable "week starts on" day, since `ccusage` can't know which weekday your account's actual weekly reset falls on.
