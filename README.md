@@ -5,7 +5,12 @@ A [StreamController](https://github.com/StreamController/StreamController) plugi
 - **Claude Usage** — the current **5-hour session block**
 - **Claude Weekly Usage** — the current week
 
-It works by shelling out to [`ccusage`](https://github.com/ryoppippi/ccusage), a community CLI that reads Claude Code's local session logs (`~/.claude/projects/**/*.jsonl`) and reports token usage per 5-hour billing window. No API key or login is needed — it only reads files that Claude Code already writes on your machine. This also picks up usage from any tool that shells out to the real `claude` CLI under the hood (e.g. the [Claudian](https://github.com/YishenTu/claudian) Obsidian plugin), not just the terminal.
+There are two data sources, chosen per key in its settings:
+
+- **Token count (ccusage)** — the default, described below.
+- **Account-wide % (Claude Code)** — your real usage-limit percentages as reported by Anthropic, the same figures as the claude.ai usage page. See [Account-wide mode](#account-wide-mode).
+
+By default it works by shelling out to [`ccusage`](https://github.com/ryoppippi/ccusage), a community CLI that reads Claude Code's local session logs (`~/.claude/projects/**/*.jsonl`) and reports token usage per 5-hour billing window. No API key or login is needed — it only reads files that Claude Code already writes on your machine. This also picks up usage from any tool that shells out to the real `claude` CLI under the hood (e.g. the [Claudian](https://github.com/YishenTu/claudian) Obsidian plugin), not just the terminal.
 
 ![Ring preview at 35%, 78%, 96% and 112%](docs/preview.png)
 
@@ -66,13 +71,39 @@ Click a key's action in StreamController to open its settings.
 | Token limit for 100% | `0` | Tokens that count as your plan's full 5-hour limit. Leave at `0` to just show the raw token count instead of a percentage — useful since Anthropic doesn't publish exact per-plan token limits; you can approximate yours by watching `ccusage blocks --recent` over a few sessions and setting it close to what you've observed. |
 | Refresh interval | `60` seconds | How often the key updates in the background (minimum 15s). |
 | Show cost instead of time remaining | off | Swap the bottom label to the block's USD cost. |
+| Data source | Token count (ccusage) | Switch to **Account-wide % (Claude Code)** for your real limit usage — see [Account-wide mode](#account-wide-mode). The ccusage-only settings are hidden in that mode. |
+| Style | Ring | **Ring**, **Pie** (filled circle) or **Full key** (the pie wedge fills the whole key). Pie and full key are easier to see on dark keys. |
 
-**Claude Weekly Usage:** same `ccusage command`, `Refresh interval`, and cost toggle as above, plus:
+**Claude Weekly Usage:** same `ccusage command`, `Refresh interval`, cost, data source and style settings as above, plus:
 
 | Setting | Default | Description |
 | --- | --- | --- |
 | Token limit for 100% | `0` | Same idea as the 5-hour action, but for your weekly total. Run `ccusage weekly --recent` over a few weeks to get a feel for a reasonable value. |
 | Week starts on | `Sunday` | Which weekday `ccusage` treats as the start of the week. Set this to whatever day your account's weekly limit actually resets on, if you know it (e.g. from a "resets Tuesday" message in Claude Code) — it won't be correct by default. |
+
+## Account-wide mode
+
+Set **Data source** to **Account-wide % (Claude Code)** on a key to show your real 5-hour session and weekly limit usage — the same percentages as the claude.ai usage page, across Claude Code, claude.ai and the desktop app. No token limit or calibration needed.
+
+**Requirements:** [Claude Code](https://code.claude.com/docs) installed on the same machine (the `claude` CLI, found at `~/.local/bin/claude` or on your `PATH`) and signed in with a Pro or Max subscription, plus `python3` on the host.
+
+**How the figure is refreshed:**
+
+- **Press the key** to send one tiny "ping" through Claude Code (`scripts/claude-usage-ping.py`): a one-word message to Haiku with no tools, MCP servers or saved session, about 900 tokens. The usage figures come back with the reply and are saved to `~/.cache/claude-usage/limits.json`. One ping updates both keys.
+- **Optional, automatic:** make Claude Code's status line save the same figures after every message you send in a terminal Claude Code session, at no extra cost. Add this to `~/.claude/settings.json` (adjust the path for a native install, see [Installation](#installation)):
+  ```json
+  {
+    "statusLine": {
+      "type": "command",
+      "command": "python3 -I ~/.var/app/com.core447.StreamController/data/plugins/dev_enjxz_ClaudeUsage/scripts/statusline-usage.py"
+    }
+  }
+  ```
+  This only replaces your status line if you don't already have one; it prints a short `Claude usage: 5h 19% · week 3%` line. The Claude desktop app doesn't run status line scripts, so usage there is only picked up by a ping.
+
+Between refreshes the key shows the last reading; once its reset time passes it shows `0%` / `reset` until the next reading.
+
+> **Note:** the ping relies on the `rate_limit_event` Claude Code includes in its `--output-format stream-json` output, and the status line on the `rate_limits` field of the status line JSON. Neither is a formal API, so a future Claude Code update could change them.
 
 ## How it works
 

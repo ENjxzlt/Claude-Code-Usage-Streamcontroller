@@ -60,6 +60,6 @@ class ClaudeUsagePlugin(PluginBase):
         self.register(
             plugin_name=self.lm.get("plugin.name"),
             github_repo="https://github.com/ENjxzlt/Claude-Code-Usage-Streamcontroller",
-            plugin_version="1.2.0",
+            plugin_version="1.3.0",
             app_version="1.5.0-beta",
         )
