@@ -28,5 +28,9 @@
 
     "claude-weekly.label.top": "Claude Week",
     "claude-weekly.label.no-data": "No data this week",
-    "claude-weekly.label.error": "ccusage error"
+    "claude-weekly.label.error": "ccusage error",
+    "claude-usage.count.title": "Tokens to count",
+    "claude-usage.count.subtitle": "Which tokens go into the percentage. 'Output tokens only' ignores cache reads, which dominate the total and may not track the account's real limit.",
+    "claude-usage.count.all": "All tokens",
+    "claude-usage.count.output": "Output tokens only"
 }

@@ -86,6 +86,7 @@ class ClaudeUsage(ActionBase):
         settings.setdefault("token_limit", DEFAULT_TOKEN_LIMIT)
         settings.setdefault("refresh_seconds", shared.DEFAULT_REFRESH_SECONDS)
         settings.setdefault("show_cost", False)
+        settings.setdefault("count_mode", shared.DEFAULT_COUNT_MODE)
         self.set_settings(settings)
         return settings
 
@@ -99,6 +100,21 @@ class ClaudeUsage(ActionBase):
         limit_row = Adw.EntryRow(title=self.tr("claude-usage.token-limit.title"))
         limit_row.set_text(str(settings.get("token_limit", DEFAULT_TOKEN_LIMIT)))
         limit_row.connect("notify::text", self._on_token_limit_changed)
+
+        count_row = Adw.ActionRow(
+            title=self.tr("claude-usage.count.title"),
+            subtitle=self.tr("claude-usage.count.subtitle"),
+        )
+        count_dropdown = Gtk.DropDown(
+            model=Gtk.StringList.new(
+                [self.tr("claude-usage.count.all"), self.tr("claude-usage.count.output")]
+            ),
+            valign=Gtk.Align.CENTER,
+        )
+        count_dropdown.set_selected(shared.COUNT_MODES.index(shared.count_mode_of(settings)))
+        count_dropdown.connect("notify::selected", self._on_count_mode_changed)
+        count_row.add_suffix(count_dropdown)
+        count_row.set_activatable_widget(count_dropdown)
 
         refresh_row = Adw.EntryRow(title=self.tr("claude-usage.refresh.title"))
         refresh_row.set_text(str(settings.get("refresh_seconds", shared.DEFAULT_REFRESH_SECONDS)))
@@ -115,7 +131,7 @@ class ClaudeUsage(ActionBase):
         cost_row.add_suffix(cost_switch)
         cost_row.set_activatable_widget(cost_switch)
 
-        return [command_row, limit_row, refresh_row, cost_row]
+        return [command_row, limit_row, count_row, refresh_row, cost_row]
 
     def _on_command_changed(self, entry, _):
         settings = self.get_settings()
@@ -125,6 +141,11 @@ class ClaudeUsage(ActionBase):
     def _on_token_limit_changed(self, entry, _):
         settings = self.get_settings()
         settings["token_limit"] = shared.parse_int(entry.get_text(), DEFAULT_TOKEN_LIMIT, minimum=0)
+        self.set_settings(settings)
+
+    def _on_count_mode_changed(self, dropdown, _):
+        settings = self.get_settings()
+        settings["count_mode"] = shared.COUNT_MODES[dropdown.get_selected()]
         self.set_settings(settings)
 
     def _on_refresh_changed(self, entry, _):
@@ -194,7 +215,10 @@ class ClaudeUsage(ActionBase):
             return False
 
         token_counts = block.get("tokenCounts", {})
-        total_tokens = sum(int(token_counts.get(field) or 0) for field in TOKEN_FIELDS)
+        if shared.count_mode_of(settings) == shared.COUNT_OUTPUT:
+            total_tokens = int(token_counts.get("outputTokens") or 0)
+        else:
+            total_tokens = sum(int(token_counts.get(field) or 0) for field in TOKEN_FIELDS)
 
         token_limit = shared.parse_int(settings.get("token_limit"), DEFAULT_TOKEN_LIMIT, minimum=0)
         show_cost = bool(settings.get("show_cost", False))

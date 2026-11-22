@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New "Tokens to count" setting on both actions: `All tokens` (the existing behavior, still the default) or `Output tokens only`. Cache reads are usually the large majority of a Claude Code token total and can make the percentage drift from `/usage`; counting output tokens alone tracked it more closely in testing. See the new "Choosing what to count" section in the README.
+
 ## 1.2.0
 
 - New action: **Claude Weekly Usage** — same Claude-branded progress ring, but aggregated over the current week (`ccusage weekly`) instead of the active 5-hour block. Has its own token limit and a configurable "week starts on" day, since `ccusage` can't know which weekday your account's actual weekly reset falls on.

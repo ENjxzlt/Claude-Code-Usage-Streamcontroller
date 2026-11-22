@@ -64,10 +64,11 @@ Click a key's action in StreamController to open its settings.
 | --- | --- | --- |
 | ccusage command | `npx --yes ccusage@latest` | How to invoke ccusage. Use `ccusage` if you installed it globally, or `bunx ccusage` for Bun. |
 | Token limit for 100% | `0` | Tokens that count as your plan's full 5-hour limit. Leave at `0` to just show the raw token count instead of a percentage — useful since Anthropic doesn't publish exact per-plan token limits; you can approximate yours by watching `ccusage blocks --recent` over a few sessions and setting it close to what you've observed. |
+| Tokens to count | `All tokens` | Which tokens go into the percentage (and the raw count shown when no limit is set). `All tokens` sums input, output, cache-creation and cache-read tokens. `Output tokens only` counts just output tokens — see [Choosing what to count](#choosing-what-to-count). Remember to re-calibrate the token limit if you change this. |
 | Refresh interval | `60` seconds | How often the key updates in the background (minimum 15s). |
 | Show cost instead of time remaining | off | Swap the bottom label to the block's USD cost. |
 
-**Claude Weekly Usage:** same `ccusage command`, `Refresh interval`, and cost toggle as above, plus:
+**Claude Weekly Usage:** same `ccusage command`, `Tokens to count`, `Refresh interval`, and cost toggle as above, plus:
 
 | Setting | Default | Description |
 | --- | --- | --- |
@@ -83,11 +84,24 @@ Every refresh interval (and once immediately on key press), a background thread 
 <command> weekly --json --offline --last 1 -w <week-starts-on>
 ```
 
-**Claude Usage** parses the active block's token counts (`inputTokens` + `outputTokens` + `cacheCreationInputTokens` + `cacheReadInputTokens`) and its `endTime`. **Claude Weekly Usage** parses the current week's `totalTokens` and derives the week's end from its `week` start date (always exactly 7 days). Both compute a percentage and a time-remaining string the same way, and share the ring-drawing code.
+**Claude Usage** parses the active block's token counts (by default `inputTokens` + `outputTokens` + `cacheCreationInputTokens` + `cacheReadInputTokens`, or just `outputTokens` with the "Output tokens only" setting) and its `endTime`. **Claude Weekly Usage** parses the current week's `totalTokens` (or `outputTokens`) and derives the week's end from its `week` start date (always exactly 7 days). Both compute a percentage and a time-remaining string the same way, and share the ring-drawing code.
 
 The ring is drawn with Pillow (already a StreamController dependency) at 4x resolution and downsampled for smooth edges, then set as the key's media. The UI update is marshalled back onto the main thread via `GLib.idle_add`, so a slow `ccusage` invocation never blocks StreamController.
 
 On a Flatpak install, the command runs via `flatpak-spawn --host` (with the working directory pinned to `$HOME`) so it executes on the host system where Node/`ccusage` actually live, rather than inside the sandbox.
+
+### Choosing what to count
+
+Cache reads — the same context being re-read on every turn — are usually the large majority of the total `ccusage` reports for Claude Code (often 95%+). That means the "All tokens" count grows with how long your sessions run and how much context is loaded, not with how much work you're doing, and the percentage can drift away from the one Claude Code shows in `/usage`.
+
+If your key's percentage doesn't track `/usage`, try **Output tokens only**:
+
+1. Set **Tokens to count** to `Output tokens only`.
+2. Run `/usage` in Claude Code and note the "% used" for the session (and week).
+3. Compare it with the matching `ccusage` figure (`ccusage blocks --active` / `ccusage weekly`, the `outputTokens` value) and set the token limit to `outputTokens ÷ (percent / 100)`.
+4. Check again later at a different percentage. If the implied limit stays roughly constant, that mode is tracking well; if it doesn't, try the other mode.
+
+Anthropic doesn't publish how limits are computed, so neither mode is exact — this is a calibration aid, not a guarantee.
 
 ## Troubleshooting
 
