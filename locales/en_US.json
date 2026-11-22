@@ -28,5 +28,7 @@
 
     "claude-weekly.label.top": "Claude Week",
     "claude-weekly.label.no-data": "No data this week",
-    "claude-weekly.label.error": "ccusage error"
+    "claude-weekly.label.error": "ccusage error",
+    "claude-weekly.reset-time.title": "Reset time (24h, HH:MM)",
+    "claude-weekly.reset-timezone.title": "Reset timezone (e.g. America/Los_Angeles)"
 }
