@@ -101,6 +101,7 @@ class ClaudeWeeklyUsage(ActionBase):
         settings.setdefault("token_limit", DEFAULT_TOKEN_LIMIT)
         settings.setdefault("refresh_seconds", shared.DEFAULT_REFRESH_SECONDS)
         settings.setdefault("show_cost", False)
+        settings.setdefault("count_mode", shared.DEFAULT_COUNT_MODE)
         settings.setdefault("start_of_week", DEFAULT_START_OF_WEEK)
         self.set_settings(settings)
         return settings
@@ -131,6 +132,21 @@ class ClaudeWeeklyUsage(ActionBase):
         weekday_row.add_suffix(weekday_dropdown)
         weekday_row.set_activatable_widget(weekday_dropdown)
 
+        count_row = Adw.ActionRow(
+            title=self.tr("claude-usage.count.title"),
+            subtitle=self.tr("claude-usage.count.subtitle"),
+        )
+        count_dropdown = Gtk.DropDown(
+            model=Gtk.StringList.new(
+                [self.tr("claude-usage.count.all"), self.tr("claude-usage.count.output")]
+            ),
+            valign=Gtk.Align.CENTER,
+        )
+        count_dropdown.set_selected(shared.COUNT_MODES.index(shared.count_mode_of(settings)))
+        count_dropdown.connect("notify::selected", self._on_count_mode_changed)
+        count_row.add_suffix(count_dropdown)
+        count_row.set_activatable_widget(count_dropdown)
+
         refresh_row = Adw.EntryRow(title=self.tr("claude-usage.refresh.title"))
         refresh_row.set_text(str(settings.get("refresh_seconds", shared.DEFAULT_REFRESH_SECONDS)))
         refresh_row.connect("notify::text", self._on_refresh_changed)
@@ -146,7 +162,7 @@ class ClaudeWeeklyUsage(ActionBase):
         cost_row.add_suffix(cost_switch)
         cost_row.set_activatable_widget(cost_switch)
 
-        return [command_row, limit_row, weekday_row, refresh_row, cost_row]
+        return [command_row, limit_row, count_row, weekday_row, refresh_row, cost_row]
 
     def _on_command_changed(self, entry, _):
         settings = self.get_settings()
@@ -161,6 +177,11 @@ class ClaudeWeeklyUsage(ActionBase):
     def _on_start_of_week_changed(self, dropdown, _):
         settings = self.get_settings()
         settings["start_of_week"] = WEEKDAYS[dropdown.get_selected()]
+        self.set_settings(settings)
+
+    def _on_count_mode_changed(self, dropdown, _):
+        settings = self.get_settings()
+        settings["count_mode"] = shared.COUNT_MODES[dropdown.get_selected()]
         self.set_settings(settings)
 
     def _on_refresh_changed(self, entry, _):
@@ -230,7 +251,10 @@ class ClaudeWeeklyUsage(ActionBase):
             self.set_background_color(shared.COLOR_NONE)
             return False
 
-        total_tokens = int(week.get("totalTokens") or 0)
+        if shared.count_mode_of(settings) == shared.COUNT_OUTPUT:
+            total_tokens = int(week.get("outputTokens") or 0)
+        else:
+            total_tokens = int(week.get("totalTokens") or 0)
 
         token_limit = shared.parse_int(settings.get("token_limit"), DEFAULT_TOKEN_LIMIT, minimum=0)
         show_cost = bool(settings.get("show_cost", False))

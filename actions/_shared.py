@@ -72,6 +72,21 @@ def render_ring_image(percent: float, color) -> "Image.Image":
     return img.resize((RING_OUTPUT, RING_OUTPUT), Image.LANCZOS)
 
 
+# Which tokens count toward the usage percentage / raw count shown on the key.
+# Cache reads are typically the vast majority of a Claude Code total and may
+# not track the account's real limit, so "output" can match the percentage
+# Claude Code reports better. "all" is the original behavior.
+COUNT_ALL = "all"
+COUNT_OUTPUT = "output"
+COUNT_MODES = [COUNT_ALL, COUNT_OUTPUT]
+DEFAULT_COUNT_MODE = COUNT_ALL
+
+
+def count_mode_of(settings: dict) -> str:
+    mode = settings.get("count_mode")
+    return mode if mode in COUNT_MODES else DEFAULT_COUNT_MODE
+
+
 def is_in_flatpak() -> bool:
     return os.path.isfile("/.flatpak-info")
 
