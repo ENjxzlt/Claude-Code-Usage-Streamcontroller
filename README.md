@@ -73,6 +73,8 @@ Click a key's action in StreamController to open its settings.
 | --- | --- | --- |
 | Token limit for 100% | `0` | Same idea as the 5-hour action, but for your weekly total. Run `ccusage weekly --recent` over a few weeks to get a feel for a reasonable value. |
 | Week starts on | `Sunday` | Which weekday `ccusage` treats as the start of the week. Set this to whatever day your account's weekly limit actually resets on, if you know it (e.g. from a "resets Tuesday" message in Claude Code) — it won't be correct by default. |
+| Reset time | `00:00` | Time of day (24h, `HH:MM`) your weekly limit resets on that weekday. Used only for the countdown on the bottom label. Check `/usage` in Claude Code for the exact time (e.g. `06:59`). |
+| Reset timezone | `UTC` | IANA timezone name the reset time is in, e.g. `America/Los_Angeles`. Invalid names fall back to UTC. |
 
 ## How it works
 
