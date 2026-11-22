@@ -236,7 +236,9 @@ class ClaudeWeeklyUsage(ActionBase):
         show_cost = bool(settings.get("show_cost", False))
         start_of_week = settings.get("start_of_week", DEFAULT_START_OF_WEEK)
 
-        remaining_seconds = seconds_until_week_end(week.get("week"), start_of_week)
+        # Newer ccusage versions label this field "period" in their all-agents
+        # output; "ccusage claude weekly" still uses "week".
+        remaining_seconds = seconds_until_week_end(week.get("week") or week.get("period"), start_of_week)
 
         if token_limit > 0:
             percent = round((total_tokens / token_limit) * 100)
