@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Progress ring is now drawn at 72% of the key with a thinner stroke (same geometry as the Grok Usage plugin) so it no longer runs underneath the text labels.
+- The ring's unfilled background track is now clearly visible (alpha 55 -> 160).
+- Fixed the **Claude Weekly Usage** countdown being blank with newer `ccusage` output, which names the week's start date `period` instead of `week`.
+- **Claude Weekly Usage** has new "Reset time" and "Reset timezone" settings so the countdown ends at your account's real reset (e.g. Saturday 6:59am `America/Los_Angeles`) instead of midnight UTC. Defaults preserve the previous behavior.
+
 ## 1.2.0
 
 - New action: **Claude Weekly Usage** — same Claude-branded progress ring, but aggregated over the current week (`ccusage weekly`) instead of the active 5-hour block. Has its own token limit and a configurable "week starts on" day, since `ccusage` can't know which weekday your account's actual weekly reset falls on.

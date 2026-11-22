@@ -1,5 +1,6 @@
 import threading
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import gi
 from loguru import logger as log
@@ -18,6 +19,8 @@ from .. import _shared as shared
 
 DEFAULT_TOKEN_LIMIT = 0  # 0 => show raw token count instead of a percentage
 DEFAULT_START_OF_WEEK = "sunday"
+DEFAULT_RESET_TIME = "00:00"  # HH:MM, 24h, in DEFAULT_RESET_TIMEZONE
+DEFAULT_RESET_TIMEZONE = "UTC"
 
 # Matches ccusage's --start-of-week values, in the order shown in the dropdown.
 WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
@@ -36,21 +39,37 @@ def fetch_current_week(command: str, start_of_week: str, timeout: int = 25) -> d
     return weeks[0] if weeks else {}
 
 
-def seconds_until_week_end(week_start_date: str | None, start_of_week: str):
+def seconds_until_week_end(
+    week_start_date: str | None,
+    start_of_week: str,
+    reset_time: str = DEFAULT_RESET_TIME,
+    reset_timezone: str = DEFAULT_RESET_TIMEZONE,
+):
     """
-    ccusage's 'week' field is a plain YYYY-MM-DD date (the configured
-    start-of-week day), with no time/timezone - treated as UTC midnight,
-    consistent with how ccusage timestamps everything else. The week is
-    always exactly 7 days.
+    ccusage's week field is a plain YYYY-MM-DD date (the configured
+    start-of-week day). An account's limit actually resets at a specific
+    wall-clock time on that weekday, so the week window is
+    [date @ reset_time, date + 7 days @ reset_time] in reset_timezone.
+    The defaults (00:00 UTC) keep the original midnight-UTC behavior.
+
+    If ccusage has already rolled over to a new calendar week but the reset
+    time hasn't happened yet today, the countdown targets that upcoming reset.
     """
     if not week_start_date:
         return None
     try:
-        start = datetime.strptime(week_start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    except ValueError:
+        tz = ZoneInfo(reset_timezone)
+    except Exception:  # noqa: BLE001 - unknown/invalid zone name
+        tz = timezone.utc
+    try:
+        day = datetime.strptime(week_start_date, "%Y-%m-%d")
+        hour, minute = (int(part) for part in reset_time.strip().split(":", 1))
+        start = datetime(day.year, day.month, day.day, hour, minute, tzinfo=tz)
+    except (ValueError, TypeError):
         return None
-    end = start + timedelta(days=7)
-    return (end - datetime.now(timezone.utc)).total_seconds()
+    now = datetime.now(timezone.utc)
+    end = start if now < start else start + timedelta(days=7)
+    return (end - now).total_seconds()
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +121,8 @@ class ClaudeWeeklyUsage(ActionBase):
         settings.setdefault("refresh_seconds", shared.DEFAULT_REFRESH_SECONDS)
         settings.setdefault("show_cost", False)
         settings.setdefault("start_of_week", DEFAULT_START_OF_WEEK)
+        settings.setdefault("reset_time", DEFAULT_RESET_TIME)
+        settings.setdefault("reset_timezone", DEFAULT_RESET_TIMEZONE)
         self.set_settings(settings)
         return settings
 
@@ -131,6 +152,14 @@ class ClaudeWeeklyUsage(ActionBase):
         weekday_row.add_suffix(weekday_dropdown)
         weekday_row.set_activatable_widget(weekday_dropdown)
 
+        reset_time_row = Adw.EntryRow(title=self.tr("claude-weekly.reset-time.title"))
+        reset_time_row.set_text(str(settings.get("reset_time", DEFAULT_RESET_TIME)))
+        reset_time_row.connect("notify::text", self._on_reset_time_changed)
+
+        reset_tz_row = Adw.EntryRow(title=self.tr("claude-weekly.reset-timezone.title"))
+        reset_tz_row.set_text(str(settings.get("reset_timezone", DEFAULT_RESET_TIMEZONE)))
+        reset_tz_row.connect("notify::text", self._on_reset_timezone_changed)
+
         refresh_row = Adw.EntryRow(title=self.tr("claude-usage.refresh.title"))
         refresh_row.set_text(str(settings.get("refresh_seconds", shared.DEFAULT_REFRESH_SECONDS)))
         refresh_row.connect("notify::text", self._on_refresh_changed)
@@ -146,7 +175,7 @@ class ClaudeWeeklyUsage(ActionBase):
         cost_row.add_suffix(cost_switch)
         cost_row.set_activatable_widget(cost_switch)
 
-        return [command_row, limit_row, weekday_row, refresh_row, cost_row]
+        return [command_row, limit_row, weekday_row, reset_time_row, reset_tz_row, refresh_row, cost_row]
 
     def _on_command_changed(self, entry, _):
         settings = self.get_settings()
@@ -161,6 +190,16 @@ class ClaudeWeeklyUsage(ActionBase):
     def _on_start_of_week_changed(self, dropdown, _):
         settings = self.get_settings()
         settings["start_of_week"] = WEEKDAYS[dropdown.get_selected()]
+        self.set_settings(settings)
+
+    def _on_reset_time_changed(self, entry, _):
+        settings = self.get_settings()
+        settings["reset_time"] = entry.get_text().strip() or DEFAULT_RESET_TIME
+        self.set_settings(settings)
+
+    def _on_reset_timezone_changed(self, entry, _):
+        settings = self.get_settings()
+        settings["reset_timezone"] = entry.get_text().strip() or DEFAULT_RESET_TIMEZONE
         self.set_settings(settings)
 
     def _on_refresh_changed(self, entry, _):
@@ -236,7 +275,14 @@ class ClaudeWeeklyUsage(ActionBase):
         show_cost = bool(settings.get("show_cost", False))
         start_of_week = settings.get("start_of_week", DEFAULT_START_OF_WEEK)
 
-        remaining_seconds = seconds_until_week_end(week.get("week"), start_of_week)
+        # Newer ccusage versions label this field "period" in their all-agents
+        # output; "ccusage claude weekly" still uses "week".
+        remaining_seconds = seconds_until_week_end(
+            week.get("week") or week.get("period"),
+            start_of_week,
+            settings.get("reset_time", DEFAULT_RESET_TIME),
+            settings.get("reset_timezone", DEFAULT_RESET_TIMEZONE),
+        )
 
         if token_limit > 0:
             percent = round((total_tokens / token_limit) * 100)
@@ -249,7 +295,7 @@ class ClaudeWeeklyUsage(ActionBase):
                 color = shared.COLOR_OK
             # The ring itself already carries the status color, so leave the
             # key's tile background neutral instead of double-signalling.
-            self.set_media(image=shared.render_ring_image(percent, color), size=0.97)
+            self.set_media(image=shared.render_ring_image(percent, color), size=0.72)
             self.set_background_color(shared.COLOR_NONE)
         else:
             center_text = shared.humanize_tokens(total_tokens)
