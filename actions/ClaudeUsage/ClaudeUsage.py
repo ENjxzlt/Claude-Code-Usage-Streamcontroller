@@ -212,7 +212,7 @@ class ClaudeUsage(ActionBase):
                 color = shared.COLOR_OK
             # The ring itself already carries the status color, so leave the
             # key's tile background neutral instead of double-signalling.
-            self.set_media(image=shared.render_ring_image(percent, color), size=0.97)
+            self.set_media(image=shared.render_ring_image(percent, color), size=0.72)
             self.set_background_color(shared.COLOR_NONE)
         else:
             center_text = shared.humanize_tokens(total_tokens)

@@ -41,8 +41,8 @@ LABEL_OUTLINE = {"outline_width": 2, "outline_color": [*CLAUDE_DARK, 190]}
 # its own, so this is a cheap way to avoid a jagged ring on the key.
 RING_CANVAS = 1024
 RING_OUTPUT = 256
-RING_THICKNESS = 90
-RING_INSET = 70
+RING_THICKNESS = 72
+RING_INSET = 48
 RING_TRACK_COLOR = (*CLAUDE_LIGHT_GRAY, 55)
 RING_OVERFLOW_COLOR = (*CLAUDE_RUST_DARK, 255)
 
